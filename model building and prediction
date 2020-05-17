@@ -1,0 +1,114 @@
+APPROACH FOR MODEL BUILDING
+
+1. Initially, collected a dataset with  images belonging to each class of birdsi.e. gulls,herons,hornbill,peacock,sparrow
+2. Created convolutional layers by applying kernel or feature maps
+3. Applied Max pool for translational invariance
+4. Flatten the inputs
+5. Created a Fully connected neural network
+6. Trained the model
+7. Using the model to predict the output [Python tkinter GUI]
+
+
+CODE: MODEL BUILDING
+
+#importing the model-building libraries
+import numpy as np                       
+import tensorflow
+import keras
+from keras.models import Sequential
+
+#initializing the model
+cnn_model=Sequential()
+
+#preprocessing data
+from keras.layers import Dropout,Dense,Conv2D,MaxPooling2D,Flatten
+from keras.preprocessing.image import ImageDataGenerator
+train_datagen=ImageDataGenerator(rescale=1./255,shear_range=0.2,zoom_range=0.2,horizontal_flip=True)
+test_datagen=ImageDataGenerator(rescale=1./255)
+
+
+#path of training data:D:\AAA\COURSES\AI\PROJECT\data
+x_train=train_datagen.flow_from_directory(r"D:\Project_AI\data\data\trainset",target_size=(64,64),batch_size=32,class_mode='categorical')
+x_test=train_datagen.flow_from_directory(r"D:\Project_AI\data\data\testset",target_size=(64,64),batch_size=32,class_mode='categorical')
+
+#input layers
+cnn_model.add(Conv2D(32,3,3,input_shape=(64,64,3),activation='relu'))
+cnn_model.add(MaxPooling2D(pool_size=(2,2)))
+#cnn_model.add(Dropout(0.25))
+cnn_model.add(Flatten())
+
+#hidden layers
+cnn_model.add(Dense(128,activation='relu'))
+
+#output layer
+cnn_model.add(Dense(5,activation='softmax'))
+
+#configuring the learning process
+cnn_model.compile(loss="categorical_crossentropy",optimizer='adam',metrics=['accuracy'])
+
+#training the model
+cnn_model.fit_generator(x_train,
+                         samples_per_epoch = 5000,
+                         nb_epoch = 5,
+                         validation_data = x_test,
+                         nb_val_samples = 1500)
+
+#save the model
+cnn_model.save('D:\Project_AI\model_op\crop_protection_model.h5')  #use this location for prediction  
+
+
+CODE: PREDICTION
+
+#importing the libraries
+import numpy as np
+from keras.preprocessing import image
+
+#prediction
+from tkinter import *
+from PIL import ImageTk, Image
+from tkinter import filedialog
+import os
+from keras.models import load_model
+#classifier = load_model('cancer_class_model_with_test.h5')
+classifier = load_model('D:\Project_AI\model_op\crop_protection_model.h5')
+
+classifier.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])
+root = Tk()
+root.geometry("550x300+300+150")
+root.resizable(width=True, height=True)
+
+def openfn():
+    filename = filedialog.askopenfilename(title='open')
+    return filename
+def open_img():
+    x = openfn()
+    test_image = image.load_img(x, target_size = (64,64))
+    test_image = image.img_to_array(test_image)
+    test_image = np.expand_dims(test_image, axis = 0)
+    result = classifier.predict_classes(test_image)
+    print(result)
+    if result==0:
+        print('Gulls')
+    elif result==1:
+        print('Herons')
+    elif result==2:
+        print('Hornbill')
+    elif result==3:
+        print('Peacock')
+    elif result==4:
+        print('Sparrow')
+    else:
+        print('Nan')
+    index=["Gulls","Herons","Hornbill","Peacock","Sparrow"]
+    label = Label( root, text="Prediction : "+index[result[0][0]])
+    label.pack()
+    img = Image.open(x)
+    img = img.resize((250, 250), Image.ANTIALIAS)
+    img = ImageTk.PhotoImage(img)
+    panel = Label(root, image=img)
+    panel.image = img
+    panel.pack()
+
+btn = Button(root, text='open image', command=open_img).pack()
+
+root.mainloop()
